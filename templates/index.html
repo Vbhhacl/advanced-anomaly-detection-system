@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Anomaly Detection Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<div class="container">
+    <h1>🔍 Anomaly Detection System</h1>
+
+    <div class="controls">
+        <button id="startAuto" onclick="startAutoRun()">Start Auto Run</button>
+        <button id="stopAuto" onclick="stopAutoRun()" disabled>Stop Auto Run</button>
+        <label>Interval (sec): <input id="interval" type="number" step="0.1" min="0.1" value="0.8" /></label>
+        <label>Anomaly prob: <input id="anomalyChance" type="number" step="0.01" min="0" max="1" value="0.05" /></label>
+    </div>
+
+    <div id="result"></div>
+    <div class="chart-container">
+        <canvas id="trendChart" width="800" height="350"></canvas>
+    </div>
+    <div id="eventLog" class="log"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+let autoTimer = null;
+let pointIndex = 0;
+const maxPoints = 60;
+
+const chartCtx = document.getElementById('trendChart').getContext('2d');
+const chartState = {
+    labels: [],
+    values: [],
+    colors: []
+};
+const trendChart = new Chart(chartCtx, {
+    type: 'line',
+    data: {
+        labels: chartState.labels,
+        datasets: [{
+            label: 'Sensor value',
+            data: chartState.values,
+            borderColor: '#0066cc',
+            borderWidth: 2,
+            pointRadius: 4,
+            pointBackgroundColor: chartState.colors,
+            tension: 0.25,
+            fill: false
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            x: { title: { display: true, text: 'Reading #' } },
+            y: { title: { display: true, text: 'Value' }, suggestedMin: -8, suggestedMax: 8 }
+        },
+        plugins: {
+            legend: { display: true },
+            tooltip: { mode: 'index', intersect: false }
+        }
+    }
+});
+
+function appendLog(message) {
+    const log = document.getElementById('eventLog');
+    const entry = document.createElement('div');
+    entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+    log.prepend(entry);
+    while (log.children.length > 20) log.removeChild(log.lastChild);
+}
+
+function randomValue(anomalyChance) {
+    if (Math.random() < anomalyChance) {
+        return (Math.random() < 0.5 ? -1 : 1) * (Math.random() * 3 + 3);
+    }
+    return (Math.random() * 2 - 1);
+}
+
+async function postValue(value) {
+    const response = await fetch("/predict", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ value: value })
+    });
+    return response.json();
+}
+
+async function runStep() {
+    const interval = parseFloat(document.getElementById("interval").value) || 1;
+    const anomalyChance = parseFloat(document.getElementById("anomalyChance").value) || 0.05;
+    const value = randomValue(anomalyChance);
+    try {
+        const data = await postValue(value);
+        const resultDiv = document.getElementById("result");
+        const isAnomaly = data.anomaly === 1;
+        const statusText = isAnomaly ? "🚨 Anomaly Detected" : "✅ Normal";
+
+        resultDiv.textContent = `value=${value.toFixed(4)}   ${statusText}   (model=${data.anomaly})`;
+        appendLog(`value=${value.toFixed(4)} ${statusText}`);
+
+        chartState.labels.push(++pointIndex);
+        chartState.values.push(value);
+        chartState.colors.push(isAnomaly ? '#ff3300' : '#008000');
+
+        if (chartState.labels.length > maxPoints) {
+            chartState.labels.shift();
+            chartState.values.shift();
+            chartState.colors.shift();
+        }
+
+        trendChart.update();
+
+    } catch (err) {
+        document.getElementById("result").textContent = `Error: ${err.message}`;
+        appendLog(`Error: ${err.message}`);
+    }
+
+    if (autoTimer !== null) {
+        autoTimer = setTimeout(runStep, interval * 1000);
+    }
+}
+
+function startAutoRun() {
+    if (autoTimer === null) {
+        document.getElementById("startAuto").disabled = true;
+        document.getElementById("stopAuto").disabled = false;
+        autoTimer = 0;
+        runStep();
+    }
+}
+
+function stopAutoRun() {
+    if (autoTimer !== null) {
+        clearTimeout(autoTimer);
+        autoTimer = null;
+    }
+    document.getElementById("startAuto").disabled = false;
+    document.getElementById("stopAuto").disabled = true;
+}
+</script>
+
+</body>
+</html>

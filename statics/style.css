@@ -1,0 +1,40 @@
+body {
+    font-family: Arial;
+    background: #0f172a;
+    color: white;
+    text-align: center;
+    margin-top: 100px;
+}
+
+.container {
+    background: #1e293b;
+    padding: 30px;
+    border-radius: 12px;
+    display: inline-block;
+}
+
+input {
+    padding: 10px;
+    font-size: 16px;
+    margin-right: 10px;
+}
+
+button {
+    padding: 10px 15px;
+    background: #38bdf8;
+    border: none;
+    color: black;
+    cursor: pointer;
+}
+
+.normal {
+    margin-top: 20px;
+    color: #22c55e;
+    font-size: 20px;
+}
+
+.anomaly {
+    margin-top: 20px;
+    color: #ef4444;
+    font-size: 20px;
+}
