@@ -1,5 +1,5 @@
 
-#  Advanced Anomaly Detection System (AADS)
+#  Advanced Anomaly Detection System 
 
 An end-to-end Machine Learning pipeline designed to monitor real-time data streams and flag statistical irregularities. This system integrates a predictive model with a REST API and a simulation dashboard to visualize anomaly detection as it happens.
 
